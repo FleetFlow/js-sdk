@@ -17,7 +17,7 @@ The SDK is designed to make your life easier, and help us understand your intera
 To install the SDK, simply include the following in your project:
 
 ```bash
-npm install https://github.com/FleetFlow/platform/packages/js-sdk
+npm install https://github.com/FleetFlow/js-sdk
 ```
 
 ## Usage
