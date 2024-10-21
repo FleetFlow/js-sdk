@@ -54,8 +54,8 @@ Optionally, you can also pass headers that will be used with every request.
 
 ```javascript
 const fleetFlow = new FleetFlowSDK('fleetflow.io', {
-	'X-Api-Key': '1b06abdb-6bcb-438c-b9fd-cb9d7e451a71',
-	'X-User-Type': 'fleetflow'
+  'X-Api-Key': '1b06abdb-6bcb-438c-b9fd-cb9d7e451a71',
+  'X-User-Type': 'fleetflow'
 });
 ```
 
@@ -80,8 +80,8 @@ The SDK provides a flexible way to chain methods, allowing you to interact with 
 const fleetFlow = new FleetFlowSDK();
 
 const auth = await fleetFlow.platform('v1').auth().get({
-	email: 'john@doe.com',
-	password: '******'
+  email: 'john@doe.com',
+  password: '******'
 });
 
 // Automatically uses stored token
@@ -92,17 +92,17 @@ const users = await fleetFlow.organization('v1').users().get();
 
 ```javascript
 const fleetFlow = new FleetFlowSDK('fleetflow.io', {
-	'X-Api-Key': '{organization.api_key}',
-	'X-User-Type': 'fleetflow'
+  'X-Api-Key': '{organization.api_key}',
+  'X-User-Type': 'fleetflow'
 });
 
 const auth = await fleetFlow.customer('v3').auth().get({
-	email: 'john@doe.com',
-	password: '******'
+  email: 'john@doe.com',
+  password: '******'
 });
 
 // Automatically uses stored token
-const vehicles = await fleetFlowCustomer.vehicles().get();
+const vehicles = await fleetFlow.vehicles().get();
 ```
 
 #### Interact with resources
@@ -117,13 +117,13 @@ const article = await fleetFlow.organization('v1').articles('article_uuid').get(
 
 // Create a new article
 const newArticle = await fleetFlow.organization('v1').articles().post({
-	title: 'New article',
-	text: 'Hello world!'
+  title: 'New article',
+  text: 'Hello world!'
 });
 
 // Update an article
 const updatedArticle = await fleetFlow.organization('v1').articles('article_uuid').patch({
-	title: 'Updated article'
+  title: 'Updated article'
 });
 
 // Delete an article
@@ -142,13 +142,13 @@ const review = await fleetFlow.organization('v1').articles('article_uuid').revie
 
 // Create a review for an article
 const newReview = await fleetFlow.organization('v1').articles('article_uuid').reviews().post({
-	stars: 5,
-	text: 'Great article!'
+  stars: 5,
+  text: 'Great article!'
 });
 
 // Update a review for an article
 const updatedReview = await fleetFlow.organization('v1').articles('article_uuid').reviews('review_uuid').patch({
-	stars: 4
+  stars: 4
 });
 
 // Delete a review for an article
@@ -161,8 +161,8 @@ The SDK will throw an error if the API response is not 200 OK. Make sure to hand
 
 ```javascript
 try {
-	const article = await fleetFlow.organization('v1').articles('invalid_uuid').get();
+  const article = await fleetFlow.organization('v1').articles('invalid_uuid').get();
 } catch (error) {
-	console.error('Error fetching article:', error.message);
+  console.error('Error fetching article:', error.message);
 }
 ```
