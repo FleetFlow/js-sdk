@@ -31,9 +31,26 @@ class FleetFlowSDK {
 			});
 		}
 	}
+	unsetToken() {
+		console.log('Unsetting token');
+		this.token = null;
+		this.refresh_token = null;
+
+		if (typeof window !== 'undefined' && window.localStorage.profileData) {
+			window.localStorage.profileData = JSON.stringify({
+				...JSON.parse(window.localStorage.profileData),
+				token: null,
+				refresh_token: null,
+			});
+		}
+	}
 
 	setApiKey(api_key) {
 		this.headers['X-Api-Key'] = api_key;
+	}
+
+	setUserType(user_type) {
+		this.headers['X-User-Type'] = user_type;
 	}
 
 	getLocalhostUrl(api) {
@@ -79,8 +96,13 @@ class FleetFlowSDK {
 		}
 
 		let getData = '';
-		if (method == 'GET' && Object.keys(data).length > 0) {
-			getData = '?' + new URLSearchParams(data).toString();
+		if (method === 'GET' && Object.keys(data).length > 0) {
+			const serializedData = Object.keys(data).reduce((acc, key) => {
+				acc[key] = typeof data[key] === 'object' ? JSON.stringify(data[key]) : data[key];
+				return acc;
+			}, {});
+		
+			getData = '?' + new URLSearchParams(serializedData).toString();
 		}
 
 		// Send the request
@@ -173,8 +195,12 @@ class FleetFlowSDK {
 	createProxy(path = '') {
 		if (path.startsWith('/setToken')) {
 			return this.setToken.bind(this);
+		} else if (path.startsWith('/unsetToken')) {
+			return this.unsetToken.bind(this);
 		} else if (path.startsWith('/setApiKey')) {
 			return this.setApiKey.bind(this);
+		} else if (path.startsWith('/setUserType')) {
+			return this.setUserType.bind(this);
 		}
 
 		return new Proxy(() => {}, {
@@ -185,6 +211,9 @@ class FleetFlowSDK {
 						if (path.startsWith('/platform/')) {
 							api = 'platform';
 							path = path.substr('/platform/'.length);
+						} else if (path.startsWith('/admin/')) {
+							api = 'admin';
+							path = path.substr('/admin/'.length);
 						} else if (path.startsWith('/organization/')) {
 							api = 'organization';
 							path = path.substr('/organization/'.length);
