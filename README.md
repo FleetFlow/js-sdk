@@ -27,13 +27,9 @@ npm install https://github.com/FleetFlow/js-sdk
 Choose which API you want to use.
 
 - Use the `platform-api` for interacting with platform accounts.
-
 - Use the `organization-api` for interacting with your organization.
-
 - Use the `partner-api` for partners interacting with organizations.
-
 - Use the `customer-api` for customers to interact with the organization.
-
 - Use the `orchestator-api` for custom integrations provided by the FleetFlow team.
 
 ### Initialize the SDK
@@ -65,10 +61,10 @@ Now, you can use `fleetFlow` to interact with your API.
 
 The SDK supports the following HTTP methods:
 
-- **get()**: Retrieve data from the API.
-- **post(data)**: Send data to create a new resource.
-- **patch(data)**: Update an existing resource with partial data.
-- **delete()**: Remove a resource from the API.
+- **``get()``**: Retrieve data from the API.
+- **``post(data)``**: Send data to create a new resource.
+- **``patch(data)``**: Update an existing resource with partial data.
+- **``delete()``**: Remove a resource from the API.
 
 ### Example usage
 
@@ -166,3 +162,26 @@ try {
     console.error('Error fetching article:', error.message);
 }
 ```
+
+## Additional commands
+
+The SDK contains a few shortcuts you can interact with. These shortcuts are:
+
+
+if (path.startsWith('/')) {
+	return this.setToken.bind(this);
+} else if (path.startsWith('/unsetToken')) {
+	return this.unsetToken.bind(this);
+} else if (path.startsWith('/setApiKey')) {
+	return this.setApiKey.bind(this);
+} else if (path.startsWith('/setUserType')) {
+	return this.setUserType.bind(this);
+} else if (path.startsWith('/refreshProfile')) {
+	return this.refreshProfile.bind(this);
+}
+
+- ``fleetFlow.setToken(token, refresh_token)`` can be called to refresh the token.
+- ``fleetFlow.unsetToken()`` can be called to sign out and clean the token.
+- ``fleetFlow.setApiKey(apiKey)`` can be used to set the X-Api-Key header
+- ``fleetFlow.setUserType(type)`` can be used to set the X-User-Type header
+- ``fleetFlow.refreshProfile()`` can be used to refresh the localStorage.profileData
