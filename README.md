@@ -1,187 +1,109 @@
+# Moneybird JavaScript SDK
 
-# FleetFlow JavaScript SDK
-
-The **FleetFlow JavaScript SDK** provides an easy way to interact with the FleetFlow API, allowing you to perform CRUD operations on resources using a dynamic and flexible interface.
-
-
-## Benefits of using the SDK
-
-The SDK is designed to make your life easier, and help us understand your interactions with FleetFlow better. We strongly advice to use the SDK whenever you can. Below are som benefits of using the SDK.
-
-- **Secure authentication** helps you not make mistakes during authenticating by securely handling tokens.
-
-- **Automatic refresh tokens** make it so you do not have to handle refresh tokens yourself. The SDK automatically takes care of that part for you.
+The **Moneybird JavaScript SDK** provides a simple way to interact with the Moneybird API, allowing you to perform CRUD operations on resources using a dynamic and flexible interface.
 
 ## Installation
 
-To install the SDK, simply include the following in your project:
+To install the SDK, add it to your project:
 
 ```bash
-npm install https://github.com/FleetFlow/js-sdk
+npm install https://github.com/quintenadema/moneybird-js
 ```
 
 ## Usage
 
-### Choosing your API
-
-Choose which API you want to use.
-
-- Use the `platform-api` for interacting with platform accounts.
-- Use the `organization-api` for interacting with your organization.
-- Use the `partner-api` for partners interacting with organizations.
-- Use the `customer-api` for customers to interact with the organization.
-- Use the `orchestator-api` for custom integrations provided by the FleetFlow team.
-
 ### Initialize the SDK
 
-To initialize the SDK, create a new instance by providing the base URL of your FleetFlow API:
+Create a new instance by providing your Moneybird API token and administration ID:
 
 ```javascript
-const fleetFlow = new FleetFlowSDK();
+const moneybird = new MoneybirdSDK('your-token', 'your-administration-id');
 ```
 
-Or, in case you are given a custom installation, enter your base url.
+Optionally, you can pass additional headers that will be used with every request:
 
 ```javascript
-const fleetFlow = new FleetFlowSDK(`custom-deployment.com`);
-```
-
-Optionally, you can also pass headers that will be used with every request.
-
-```javascript
-const fleetFlow = new FleetFlowSDK('fleetflow.io', {
-    'X-Api-Key': '1b06abdb-6bcb-438c-b9fd-cb9d7e451a71',
-    'X-User-Type': 'fleetflow'
+const moneybird = new MoneybirdSDK('your-token', 'your-administration-id', {
+    'Custom-Header': 'value'
 });
 ```
-
-Now, you can use `fleetFlow` to interact with your API.
 
 ### HTTP Methods
 
 The SDK supports the following HTTP methods:
 
-- **``get()``**: Retrieve data from the API.
-- **``post(data)``**: Send data to create a new resource.
-- **``patch(data)``**: Update an existing resource with partial data.
-- **``delete()``**: Remove a resource from the API.
+- **`get(data?, options?)`**: Retrieve data from the API
+- **`post(data)`**: Create a new resource
+- **`patch(data)`**: Update an existing resource
+- **`delete()`**: Remove a resource
 
-### Example usage
+### Example Usage
 
-The SDK provides a flexible way to chain methods, allowing you to interact with any endpoint dynamically. Below are some example commands you can use.
+The SDK uses method chaining to build requests. Here are some examples:
 
-#### Authenticate platform user
-
-```javascript
-const fleetFlow = new FleetFlowSDK();
-
-const auth = await fleetFlow.platform('v1').auth().get({
-    email: 'john@doe.com',
-    password: '******'
-});
-
-// Automatically uses stored token
-const users = await fleetFlow.organization('v1').users().get();
-```
-
-#### Authenticate customer
+#### Working with Purchase Invoices
 
 ```javascript
-const fleetFlow = new FleetFlowSDK('fleetflow.io', {
-    'X-Api-Key': '{organization.api_key}',
-    'X-User-Type': 'fleetflow'
+// Get all contacts (limits to the default pagination size)
+const contacts = await moneybird.contacts().get();
+
+// Get all contacts, with a filter
+const invoices = await moneybird.contacts().get({
+    query: 'Company name'
 });
 
-const auth = await fleetFlow.customer('v3').auth().get({
-    email: 'john@doe.com',
-    password: '******'
+// Get a specific contact
+const invoice = await moneybird.contacts('contact_id').get();
+
+// Create a new contact
+const newContact = await moneybird.contacts().post({
+	company_name: 'Company name'
 });
 
-// Automatically uses stored token
-const vehicles = await fleetFlow.vehicles().get();
+// Update a contact
+const updatedContact = await moneybird.contacts('contact_id').patch({
+    company_name: 'Super company'
+});
+
+// Delete a contact
+await moneybird.contactes('contact_id').delete();
 ```
 
-#### Interact with resources
-Get, create, update or delete objects with chained commands.
+#### Nested Resources
+
+Chain methods to access nested resources:
 
 ```javascript
-// Get all articles
-const articles = await fleetFlow.organization('v1').articles().get();
+// Get all details of a purchase invoice
+const notes = await moneybird.documents().purchase_invoices('invoice_id').get();
 
-// Get a specific article
-const article = await fleetFlow.organization('v1').articles('article_uuid').get();
-
-// Create a new article
-const newArticle = await fleetFlow.organization('v1').articles().post({
-    title: 'New article',
-    text: 'Hello world!'
+// Add a note to a purchase invoice
+const newNote = await moneybird.documents().purchase_invoices('invoice_id').notes().post({
+    note: 'Payment pending'
 });
-
-// Update an article
-const updatedArticle = await fleetFlow.organization('v1').articles('article_uuid').patch({
-    title: 'Updated article'
-});
-
-// Delete an article
-await fleetFlow.organization('v1').articles('article_uuid').delete();
 ```
 
-#### Nested resources
-You can chain commands to get further details. See the examples below.
+### Pagination
+
+For GET requests, you can use the `get_all` option to automatically handle pagination:
 
 ```javascript
-// Get all reviews for an article
-const reviews = await fleetFlow.organization('v1').articles('article_uuid').reviews().get();
-
-// Get a specific review for an article
-const review = await fleetFlow.organization('v1').articles('article_uuid').reviews('review_uuid').get();
-
-// Create a review for an article
-const newReview = await fleetFlow.organization('v1').articles('article_uuid').reviews().post({
-    stars: 5,
-    text: 'Great article!'
-});
-
-// Update a review for an article
-const updatedReview = await fleetFlow.organization('v1').articles('article_uuid').reviews('review_uuid').patch({
-    stars: 4
-});
-
-// Delete a review for an article
-await fleetFlow.organization('v1').articles('article_uuid').reviews('review_uuid').delete();
+// This will fetch all results across multiple pages
+const allInvoices = await moneybird.documents().purchase_invoices().get({}, { get_all: true });
 ```
 
-## Error Handling
+### Error Handling
 
-The SDK will throw an error if the API response is not 200 OK. Make sure to handle errors in your application.
+The SDK throws errors for non-200 responses. Always handle errors in your code:
 
 ```javascript
 try {
-    const article = await fleetFlow.organization('v1').articles('invalid_uuid').get();
+    const invoice = await moneybird.documents().purchase_invoices('invalid_id').get();
 } catch (error) {
-    console.error('Error fetching article:', error.message);
+    console.error('Error fetching invoice:', error.message);
 }
 ```
 
-## Additional commands
+## API Reference
 
-The SDK contains a few shortcuts you can interact with. These shortcuts are:
-
-
-if (path.startsWith('/')) {
-	return this.setToken.bind(this);
-} else if (path.startsWith('/unsetToken')) {
-	return this.unsetToken.bind(this);
-} else if (path.startsWith('/setApiKey')) {
-	return this.setApiKey.bind(this);
-} else if (path.startsWith('/setUserType')) {
-	return this.setUserType.bind(this);
-} else if (path.startsWith('/refreshProfile')) {
-	return this.refreshProfile.bind(this);
-}
-
-- ``fleetFlow.setToken(token, refresh_token)`` can be called to refresh the token.
-- ``fleetFlow.unsetToken()`` can be called to sign out and clean the token.
-- ``fleetFlow.setApiKey(apiKey)`` can be used to set the X-Api-Key header
-- ``fleetFlow.setUserType(type)`` can be used to set the X-User-Type header
-- ``fleetFlow.refreshProfile()`` can be used to refresh the localStorage.profileData
+The SDK dynamically maps to the Moneybird API endpoints. Refer to the [Moneybird API documentation](https://developer.moneybird.com/) for a complete list of available endpoints and their parameters.

@@ -1,7 +1,7 @@
 {
-  "name": "@repo/js-sdk",
+  "name": "Moneybird JS SDK",
   "version": "1.0.0",
-  "description": "Javascript SDK for FleetFlow",
+  "description": "Javascript SDK for Moneybird",
   "main": "index.js",
   "type": "module",
   "scripts": {
