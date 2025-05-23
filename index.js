@@ -277,7 +277,7 @@ class FleetFlowSDK {
 							api = 'orchestrator';
 							path = path.substr('/orchestrator/'.length);
 						} else {
-							throw new Error("API not found");
+							throw new Error("API not found for path: " + path);
 						}
 
 						const split_path = path.split('/');
