@@ -121,7 +121,7 @@ class FleetFlowSDK {
 			method,
 			headers,
 			body,
-			credentials: 'include',								 // <-- SEND THE COOKIE
+			credentials: api !== 'customer' ? 'include' : 'omit'
 		});
 
 		/* Auto-refresh if cookie expired (498 = custom, 401 = std) */
