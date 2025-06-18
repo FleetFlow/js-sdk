@@ -118,18 +118,26 @@ class FleetFlowSDK {
 
 		const headers = { ...this.headers, ...extraHeaders };
 
-		/* OAuth integration - get token and organization context */
-		if (this.oauthEnabled) {
-			const accessToken = await this.getCurrentToken();
-			if (accessToken) {
-				headers.Authorization = `Bearer ${accessToken}`;
-			}
-
-			const orgContext = await this.getOrgContext();
-			if (orgContext && orgContext.api_key) {
-				headers['X-Api-Key'] = orgContext.api_key;
-			}
+	/* OAuth integration - get token and organization context */
+	if (this.oauthEnabled) {
+		console.log('FleetFlow SDK: OAuth is enabled, oauthEnabled =', this.oauthEnabled);
+		const accessToken = await this.getCurrentToken();
+		console.log('FleetFlow SDK: Access token:', accessToken ? 'present' : 'missing');
+		if (accessToken) {
+			headers.Authorization = `Bearer ${accessToken}`;
 		}
+
+		const orgContext = await this.getOrgContext();
+		console.log('FleetFlow SDK: Organization context:', orgContext);
+		if (orgContext && orgContext.api_key) {
+			headers['X-Api-Key'] = orgContext.api_key;
+			console.log('FleetFlow SDK: Added X-Api-Key header:', orgContext.api_key);
+		} else {
+			console.log('FleetFlow SDK: No API key available in org context');
+		}
+	} else {
+		console.log('FleetFlow SDK: OAuth is NOT enabled, oauthEnabled =', this.oauthEnabled);
+	}
 
 		/* Basic-auth helper for login-by-credentials endpoints */
 		if (method === 'GET' && data.email && data.password) {
@@ -242,6 +250,16 @@ class FleetFlowSDK {
 		/* REST verbs */
 		return new Proxy(() => {}, {
 			get: (target, prop) => {
+				// Handle SDK methods directly
+				if (path === '' && typeof this[prop] === 'function') {
+					return this[prop].bind(this);
+				}
+				
+				// Handle SDK properties directly
+				if (path === '' && prop in this) {
+					return this[prop];
+				}
+				
 				if (['get', 'post', 'patch', 'delete'].includes(prop)) {
 					return async (data) => {
 						let api;
