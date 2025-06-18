@@ -78,6 +78,38 @@ class FleetFlowSDK {
 		this.headers['X-User-Type'] = userType;
 	}
 
+	/* ───────────────────────── OAuth Integration ─────────────────────────── */
+
+	/** Set up OAuth integration with session management */
+	setOAuthIntegration(getValidAccessToken, getOrganizationContext) {
+		this.getValidAccessToken = getValidAccessToken;
+		this.getOrganizationContext = getOrganizationContext;
+		this.oauthEnabled = true;
+	}
+
+	/** Disable OAuth integration and return to session/manual token mode */
+	disableOAuth() {
+		this.getValidAccessToken = null;
+		this.getOrganizationContext = null;
+		this.oauthEnabled = false;
+	}
+
+	/** Get the current access token (OAuth or manual) */
+	async getCurrentToken() {
+		if (this.oauthEnabled && this.getValidAccessToken) {
+			return await this.getValidAccessToken();
+		}
+		return this.token;
+	}
+
+	/** Get organization context for API requests */
+	async getOrgContext() {
+		if (this.oauthEnabled && this.getOrganizationContext) {
+			return this.getOrganizationContext();
+		}
+		return null;
+	}
+
 	/* ───────────────────────────── Request core ───────────────────────────── */
 
 	async request(api, version, method, path, data = {}, extraHeaders = {}) {
@@ -86,12 +118,25 @@ class FleetFlowSDK {
 
 		const headers = { ...this.headers, ...extraHeaders };
 
+		/* OAuth integration - get token and organization context */
+		if (this.oauthEnabled) {
+			const accessToken = await this.getCurrentToken();
+			if (accessToken) {
+				headers.Authorization = `Bearer ${accessToken}`;
+			}
+
+			const orgContext = await this.getOrgContext();
+			if (orgContext && orgContext.api_key) {
+				headers['X-Api-Key'] = orgContext.api_key;
+			}
+		}
+
 		/* Basic-auth helper for login-by-credentials endpoints */
 		if (method === 'GET' && data.email && data.password) {
 			headers.Authorization = `Basic ${btoa(`${data.email}:${data.password}`)}`;
 			delete data.email;
 			delete data.password;
-		} else if (this.token) {
+		} else if (!this.oauthEnabled && this.token) {
 			/* Only used in Node/runtime environments where cookie is absent */
 			headers.Authorization = `Bearer ${this.token}`;
 		}
