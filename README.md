@@ -50,8 +50,7 @@ Optionally, you can also pass headers that will be used with every request.
 
 ```javascript
 const fleetFlow = new FleetFlowSDK('fleetflow.io', {
-    'X-Api-Key': '1b06abdb-6bcb-438c-b9fd-cb9d7e451a71',
-    'X-User-Type': 'fleetflow'
+    'X-Api-Key': '1b06abdb-6bcb-438c-b9fd-cb9d7e451a71'
 });
 ```
 
@@ -88,8 +87,7 @@ const users = await fleetFlow.organization('v1').users().get();
 
 ```javascript
 const fleetFlow = new FleetFlowSDK('fleetflow.io', {
-    'X-Api-Key': '{organization.api_key}',
-    'X-User-Type': 'fleetflow'
+    'X-Api-Key': '{organization.api_key}'
 });
 
 const auth = await fleetFlow.customer('v3').auth().get({
@@ -170,5 +168,4 @@ The SDK contains a few shortcuts you can interact with. These shortcuts are:
 - ``fleetFlow.setToken(token, refresh_token)`` can be called to refresh the token.
 - ``fleetFlow.unsetToken()`` can be called to sign out and clean the token.
 - ``fleetFlow.setApiKey(apiKey)`` can be used to set the X-Api-Key header
-- ``fleetFlow.setUserType(type)`` can be used to set the X-User-Type header
 - ``fleetFlow.refreshProfile()`` can be used to refresh the localStorage.profileData

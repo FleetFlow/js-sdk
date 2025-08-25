@@ -106,10 +106,6 @@ class FleetFlowSDK {
 		this.headers["X-Api-Key"] = apiKey;
 	}
 
-	setUserType(userType) {
-		this.headers["X-User-Type"] = userType;
-	}
-
 	setOAuthConfig(config = {}) {
 		const authBase = this.getAuthBaseURL();
 		this.oauth = {
@@ -194,7 +190,7 @@ class FleetFlowSDK {
 			response_type: "code",
 			client_id: clientId || this.oauth.clientId,
 			redirect_uri: redirectUri || this.oauth.redirectUri,
-			scope: Array.isArray(scope) ? scope.join(" ") : (scope || this.oauth.scopes).join(" "),
+			scope: Array.isArray(scope) ? scope.join(" ") : scope ? scope : this.oauth.scopes.join(" "),
 			code_challenge: codeChallenge,
 			code_challenge_method: "S256",
 			state: state || "",
