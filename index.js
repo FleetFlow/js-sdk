@@ -7,8 +7,9 @@
 */
 
 class FleetFlowSDK {
-	constructor(baseURL = "fleetflow.io", headers = {}) {
+	constructor(baseURL = "fleetflow.io", headers = {}, isDevelopment = false) {
 		this.baseURL = baseURL;
+		this.isDevelopment = isDevelopment;
 
 		this.headers = {
 			"Content-Type": "application/json",
@@ -66,29 +67,29 @@ class FleetFlowSDK {
 			orchestrator: "3004",
 			partner: "3005",
 			admin: "3007",
+
+			auth: '3104',
 		};
 		const port = ports[api];
 		if (!port) throw new Error(`Unknown API: ${api}`);
 
-		if (this.baseURL === "localhost")
-			return `http://localhost:${port}`;
-		if (this.isIPAddress(this.baseURL))
-			return `http://${this.baseURL}:${port}`;
-		return `http://localhost:${port}`;
+		return `http://${this.baseURL}:${port}`
 	}
 
 	buildApiRoot(api) {
-		if (this.baseURL === "localhost" || this.isIPAddress(this.baseURL)) {
+		if (this.isDevelopment) {
 			return this.getLocalhostUrl(api);
+		} else {
+			return `https://${api}-api.${this.baseURL}`;
 		}
-		return `https://${api}-api.${this.baseURL}`;
 	}
 
 	getAuthBaseURL() {
-		if (this.baseURL === "localhost" || this.isIPAddress(this.baseURL)) {
-			return "http://localhost:3104";
+		if (this.isDevelopment) {
+			return this.getLocalhostUrl("auth");
+		} else {
+			return `https://auth.${this.baseURL}`;
 		}
-		return `https://auth.${this.baseURL}`;
 	}
 
 	/* ───────────────────────────── Public setters ───────────────────────────── */
