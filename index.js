@@ -405,6 +405,101 @@ class FleetFlowSDK {
 		);
 	}
 
+	/* ───────────────────────────── WebSocket ───────────────────────────── */
+
+	ws(api, version, path, options = {}) {
+		const {
+			onConnect,
+			onDisconnect,
+			onMessage,
+			onError,
+			reconnect = true,
+			reconnectDelay = 3000,
+			maxReconnectAttempts = 5,
+		} = options;
+
+		const root = this.buildApiRoot(api).replace(/^http/, 'ws');
+		const url = `${root}/${version}/${path}`;
+
+		let ws = null;
+		let reconnectAttempts = 0;
+		let intentionallyClosed = false;
+
+		const connect = () => {
+			// Build WebSocket URL with auth token as query param if in backend
+			let wsUrl = url;
+			if (!this.isBrowser && this.token) {
+				const separator = url.includes('?') ? '&' : '?';
+				wsUrl = `${url}${separator}Authorization=${encodeURIComponent(this.token)}&X-Api-Key=${encodeURIComponent(this.headers["X-Api-Key"] || '')}`;
+			} else if (this.isBrowser) {
+				// In web mode, cookies are sent automatically
+				wsUrl = `${url}?X-Api-Key=${encodeURIComponent(this.headers["X-Api-Key"] || '')}`;
+			} else {
+				throw new Error('No authentication method available for WebSocket');
+			}
+
+			ws = new WebSocket(wsUrl);
+
+			ws.onopen = () => {
+				reconnectAttempts = 0;
+				if (onConnect) onConnect();
+			};
+
+			ws.onclose = (event) => {
+				if (onDisconnect) onDisconnect(event);
+
+				// Auto-reconnect logic
+				if (!intentionallyClosed && reconnect && reconnectAttempts < maxReconnectAttempts) {
+					reconnectAttempts++;
+					setTimeout(() => {
+						console.log(`Reconnecting... (attempt ${reconnectAttempts})`);
+						connect();
+					}, reconnectDelay);
+				}
+			};
+
+			ws.onmessage = (event) => {
+				if (onMessage) {
+					try {
+						const data = JSON.parse(event.data);
+						onMessage(data);
+					} catch (e) {
+						// If not JSON, pass raw data
+						onMessage(event.data);
+					}
+				}
+			};
+
+			ws.onerror = (error) => {
+				if (onError) onError(error);
+			};
+		};
+
+		connect();
+
+		// Return client interface
+		return {
+			send: (data) => {
+				if (ws && ws.readyState === WebSocket.OPEN) {
+					const payload = typeof data === 'string' ? data : JSON.stringify(data);
+					ws.send(payload);
+				} else {
+					throw new Error('WebSocket is not open');
+				}
+			},
+			close: () => {
+				intentionallyClosed = true;
+				if (ws) ws.close();
+			},
+			get readyState() {
+				return ws ? ws.readyState : WebSocket.CLOSED;
+			},
+			get isOpen() {
+				return ws && ws.readyState === WebSocket.OPEN;
+			},
+		};
+	}
+
 	/* ───────────────────────────── Dynamic proxy ───────────────────────────── */
 
 	createProxy(path = "") {
@@ -426,7 +521,7 @@ class FleetFlowSDK {
 					return this[prop];
 				}
 
-				if (["get", "post", "patch", "delete"].includes(prop)) {
+				if (["get", "post", "patch", "delete", "ws"].includes(prop)) {
 					return async (data) => {
 						let api;
 
@@ -455,6 +550,11 @@ class FleetFlowSDK {
 						const parts = path.split("/");
 						const version = parts.shift();
 						const subPath = parts.join("/");
+
+						// WebSocket uses different method
+						if (prop === "ws") {
+							return this.ws(api, version, subPath, data);
+						}
 
 						return this.request(
 							api,
