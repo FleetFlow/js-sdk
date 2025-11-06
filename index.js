@@ -184,6 +184,7 @@ class FleetFlowSDK {
 		scope,
 		codeChallenge,
 		state,
+		prompt,
 		extraParams = {},
 	}) {
 		const endpoint = this.oauth.authorizationEndpoint || this.getAuthBaseURL();
@@ -194,6 +195,7 @@ class FleetFlowSDK {
 			scope: Array.isArray(scope) ? scope.join(" ") : scope ? scope : this.oauth.scopes.join(" "),
 			code_challenge: codeChallenge,
 			code_challenge_method: "S256",
+			prompt: prompt || undefined,
 			state: state || "",
 		});
 
@@ -267,6 +269,27 @@ class FleetFlowSDK {
 		}
 
 		return res.json();
+	}
+	
+	/* ───────────────────────────── Logout ───────────────────────────── */
+	async logout() {
+		if (this.isBrowser && this.oauth.enabled) {
+			// Web: call your app-local logout route to clear HttpOnly cookies
+			const logoutUrl = this.oauth.logoutRoute || "/api/auth/logout";
+			const res = await fetch(logoutUrl, {
+				method: "POST",
+				credentials: "include",
+			});
+
+			if (res.status === 204 || res.status === 200) return;
+
+			throw new Error(
+				`Logout failed (status ${res.status})`
+			);
+		}
+
+		// Backend: just clear the token
+		this.unsetToken();
 	}
 
 	/* ───────────────────────────── Request core ───────────────────────────── */
@@ -507,10 +530,9 @@ class FleetFlowSDK {
 		if (path.startsWith("/unsetToken")) return this.unsetToken.bind(this);
 		if (path.startsWith("/setApiKey")) return this.setApiKey.bind(this);
 		if (path.startsWith("/setUserType")) return this.setUserType.bind(this);
-		if (path.startsWith("/setOAuthConfig"))
-			return this.setOAuthConfig.bind(this);
-		if (path.startsWith("/disableOAuth"))
-			return this.disableOAuth.bind(this);
+		if (path.startsWith("/setOAuthConfig")) return this.setOAuthConfig.bind(this);
+		if (path.startsWith("/disableOAuth")) return this.disableOAuth.bind(this);
+		if (path.startsWith("/logout")) return this.logout.bind(this);
 
 		return new Proxy(() => {}, {
 			get: (target, prop) => {
