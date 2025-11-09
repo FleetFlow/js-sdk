@@ -324,7 +324,7 @@ class FleetFlowSDK {
 		if (method !== "GET" && method !== "DELETE") {
 			if (data instanceof FormData) {
 				body = data;
-				delete headers["Content-Type"]; // Let browser set boundary
+				delete headers["Content-Type"];
 			} else {
 				body = JSON.stringify(data || {});
 			}
@@ -341,14 +341,7 @@ class FleetFlowSDK {
 		if (res.status === 401 || res.status === 498) {
 			try {
 				await this.handleOAuthRefresh();
-				return this.request(
-					api,
-					version,
-					method,
-					path,
-					data,
-					extraHeaders
-				);
+				return this.request(api, version, method, path, data, extraHeaders);
 			} catch (e) {
 				// Fallthrough to error parsing below
 			}
@@ -357,6 +350,33 @@ class FleetFlowSDK {
 		const isSuccess = res.status >= 200 && res.status < 300;
 		if (res.status === 204) return undefined;
 
+		// Check content type to determine how to parse response
+		const contentType = res.headers.get("content-type") || "";
+		
+		// Handle binary data (zip, pdf, images, etc.)
+		if (
+			contentType.includes("application/zip") ||
+			contentType.includes("application/octet-stream") ||
+			contentType.includes("application/pdf") ||
+			contentType.includes("image/")
+		) {
+			if (!isSuccess) {
+				// Even for binary endpoints, errors might be JSON
+				const text = await res.text();
+				let json = null;
+				try {
+					json = JSON.parse(text);
+				} catch {}
+				throw new Error(
+					(json && (json.message || json.error)) || text || "Request failed"
+				);
+			}
+			
+			// Return the blob for binary data
+			return res.blob();
+		}
+
+		// Handle JSON/text as before
 		const text = await res.text();
 		let json = null;
 		if (text) {
@@ -369,13 +389,10 @@ class FleetFlowSDK {
 
 		if (!isSuccess) {
 			throw new Error(
-				(json && (json.message || json.error)) ||
-					text ||
-					"Request failed"
+				(json && (json.message || json.error)) || text || "Request failed"
 			);
 		}
 
-		// APIs often wrap as { data: ... }
 		return json && Object.prototype.hasOwnProperty.call(json, "data")
 			? json.data
 			: json;
