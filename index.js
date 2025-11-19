@@ -294,7 +294,7 @@ class FleetFlowSDK {
 
 	/* ───────────────────────────── Request core ───────────────────────────── */
 
-	async request(api, version, method, path, data = {}, extraHeaders = {}) {
+	async request(api, version, method, path, data = {}, extraHeaders = {}, _retried = false) {
 		const root = this.buildApiRoot(api);
 		const url = `${root}/${version}/${path}`;
 
@@ -337,11 +337,11 @@ class FleetFlowSDK {
 			credentials: this.isBrowser ? "include" : "omit",
 		});
 
-		// Auto-refresh (401 or 498) and retry once
-		if (res.status === 401 || res.status === 498) {
+		// Auto-refresh (498) and retry once
+		if (res.status === 498 && ! _retried) {
 			try {
 				await this.handleOAuthRefresh();
-				return this.request(api, version, method, path, data, extraHeaders);
+				return this.request(api, version, method, path, data, extraHeaders, true);
 			} catch (e) {
 				// Fallthrough to error parsing below
 			}
