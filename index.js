@@ -270,7 +270,7 @@ class FleetFlowSDK {
 
 		return res.json();
 	}
-	
+
 	/* ───────────────────────────── Logout ───────────────────────────── */
 	async logout() {
 		if (this.isBrowser && this.oauth.enabled) {
@@ -352,7 +352,7 @@ class FleetFlowSDK {
 
 		// Check content type to determine how to parse response
 		const contentType = res.headers.get("content-type") || "";
-		
+
 		// Handle binary data (zip, pdf, images, etc.)
 		if (
 			contentType.includes("application/zip") ||
@@ -371,7 +371,7 @@ class FleetFlowSDK {
 					(json && (json.message || json.error)) || text || "Request failed"
 				);
 			}
-			
+
 			// Return the blob for binary data
 			return res.blob();
 		}
