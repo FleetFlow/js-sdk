@@ -319,9 +319,9 @@ class FleetFlowSDK {
 			query = "?" + new URLSearchParams(qs).toString();
 		}
 
-		// Body for POST/PATCH
+		// Body for methods that are allowed to carry JSON/form payloads.
 		let body = null;
-		if (method !== "GET" && method !== "DELETE") {
+		if (["POST", "PATCH", "PUT"].includes(method)) {
 			if (data instanceof FormData) {
 				body = data;
 				delete headers["Content-Type"];
