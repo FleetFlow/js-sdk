@@ -288,7 +288,14 @@ class FleetFlowSDK {
 				credentials: "include",
 			});
 
-			if (res.status === 204 || res.status === 200) return;
+			if (res.ok) {
+				const payload = res.status === 204
+					? null
+					: await res.json().catch(() => null);
+				const authLogoutUrl = payload?.data?.logout_url || payload?.logout_url;
+				window.location.assign(authLogoutUrl || this.oauth.loginRoute || "/api/auth/login");
+				return;
+			}
 
 			throw new Error(
 				`Logout failed (status ${res.status})`
