@@ -31,10 +31,11 @@ class FleetFlowSDK {
 			enabled: false,
 			clientId: null,
 			redirectUri: null,
-			scopes: ["openid", "profile", "email"],
+			scopes: ["openid", "profile", "email", "offline_access"],
+			resource: null,
 			// Endpoints at the auth app
 			authorizationEndpoint: null, // defaults to `${authBase}/oauth/authorize`
-			tokenEndpoint: null, // defaults to `${authBase}/oauth/token`
+			tokenEndpoint: null, // defaults to Better Auth's native OAuth token endpoint
 			// Your app-local routes (Next.js) used in web mode
 			loginRoute: "/api/auth/login",
 			callbackRoute: "/api/auth/callback",
@@ -118,7 +119,10 @@ class FleetFlowSDK {
 			this.oauth.authorizationEndpoint = `${authBase}/oauth/authorize`;
 		}
 		if (!this.oauth.tokenEndpoint) {
-			this.oauth.tokenEndpoint = `${authBase}/oauth/token`;
+			this.oauth.tokenEndpoint = `${authBase}/api/better-auth/oauth2/token`;
+		}
+		if (!this.oauth.resource) {
+			this.oauth.resource = authBase;
 		}
 		this.oauth.enabled = true;
 	}
@@ -195,9 +199,10 @@ class FleetFlowSDK {
 			scope: Array.isArray(scope) ? scope.join(" ") : scope ? scope : this.oauth.scopes.join(" "),
 			code_challenge: codeChallenge,
 			code_challenge_method: "S256",
-			prompt: prompt || undefined,
-			state: state || "",
+			resource: this.oauth.resource || this.getAuthBaseURL(),
 		});
+		if (prompt) params.set("prompt", prompt);
+		if (state) params.set("state", state);
 
 		for (const [k, v] of Object.entries(extraParams || {})) {
 			if (v !== undefined && v !== null) params.append(k, String(v));
@@ -214,7 +219,7 @@ class FleetFlowSDK {
 		clientId,
 	}) {
 		const tokenEndpoint =
-			this.oauth.tokenEndpoint || `${this.getAuthBaseURL()}/oauth/token`;
+			this.oauth.tokenEndpoint || `${this.getAuthBaseURL()}/api/better-auth/oauth2/token`;
 
 		const body = new URLSearchParams({
 			grant_type: "authorization_code",
@@ -222,6 +227,7 @@ class FleetFlowSDK {
 			code_verifier: codeVerifier,
 			redirect_uri: redirectUri || this.oauth.redirectUri,
 			client_id: clientId || this.oauth.clientId,
+			resource: this.oauth.resource || this.getAuthBaseURL(),
 		});
 
 		const res = await fetch(tokenEndpoint, {
@@ -245,12 +251,13 @@ class FleetFlowSDK {
 	// Server-side: refresh tokens at the auth app
 	async oauthRefreshWithToken({ refreshToken, clientId }) {
 		const tokenEndpoint =
-			this.oauth.tokenEndpoint || `${this.getAuthBaseURL()}/oauth/token`;
+			this.oauth.tokenEndpoint || `${this.getAuthBaseURL()}/api/better-auth/oauth2/token`;
 
 		const body = new URLSearchParams({
 			grant_type: "refresh_token",
 			refresh_token: refreshToken,
 			client_id: clientId || this.oauth.clientId,
+			resource: this.oauth.resource || this.getAuthBaseURL(),
 		});
 
 		const res = await fetch(tokenEndpoint, {
