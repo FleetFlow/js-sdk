@@ -21,6 +21,9 @@ describe('OAuth callback recovery', () => {
 			new OAuthTokenExchangeError(400, { error: 'invalid_grant' })
 		)).toBe(true);
 		expect(isRecoverableOAuthCallbackError(
+			new OAuthTokenExchangeError(401, { error: 'invalid_verification' })
+		)).toBe(true);
+		expect(isRecoverableOAuthCallbackError(
 			new OAuthTokenExchangeError(500, { error: 'server_error' })
 		)).toBe(false);
 		expect(isRecoverableOAuthCallbackError(new Error('Network unavailable'))).toBe(false);

@@ -14,7 +14,7 @@ class OAuthTokenExchangeError extends Error {
 const isRecoverableOAuthCallbackError = (error) => {
 	if (!(error instanceof OAuthTokenExchangeError)) return false;
 	if (![400, 401].includes(error.status)) return false;
-	return !error.code || ['invalid_grant', 'invalid_request'].includes(error.code);
+	return !error.code || ['invalid_grant', 'invalid_request', 'invalid_verification'].includes(error.code);
 };
 
 const buildOAuthRestartUrl = (redirectTo = '/', loginRoute = '/api/auth/login') => {
