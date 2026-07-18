@@ -1,3 +1,28 @@
+class OAuthTokenExchangeError extends Error {
+	constructor(status, responseBody) {
+		const payload = responseBody && typeof responseBody === 'object' ? responseBody : {};
+		const description = payload.error_description || payload.message ||
+			(typeof responseBody === 'string' ? responseBody : 'unknown');
+		super(`Token exchange failed (${status}): ${description}`);
+		this.name = 'OAuthTokenExchangeError';
+		this.status = status;
+		this.code = payload.error || null;
+		this.responseBody = responseBody;
+	}
+}
+
+const isRecoverableOAuthCallbackError = (error) => {
+	if (!(error instanceof OAuthTokenExchangeError)) return false;
+	if (![400, 401].includes(error.status)) return false;
+	return !error.code || ['invalid_grant', 'invalid_request'].includes(error.code);
+};
+
+const buildOAuthRestartUrl = (redirectTo = '/', loginRoute = '/api/auth/login') => {
+	const safeRedirect = typeof redirectTo === 'string' && redirectTo.startsWith('/') &&
+		!redirectTo.startsWith('//') ? redirectTo : '/';
+	return `${loginRoute}?${new URLSearchParams({ redirect_to: safeRedirect })}`;
+};
+
 /* FleetFlowSDK – OAuth + cookies (web) and manual Bearer (backend)
 	 2025-08-18
 	 ------------------------------------------------
@@ -240,9 +265,13 @@ class FleetFlowSDK {
 
 		if (!res.ok) {
 			const text = await res.text();
-			throw new Error(
-				`Token exchange failed (${res.status}): ${text || "unknown"}`
-			);
+			let responseBody = text;
+			try {
+				responseBody = JSON.parse(text);
+			} catch (_) {
+				// Preserve non-JSON OAuth responses for diagnostics.
+			}
+			throw new OAuthTokenExchangeError(res.status, responseBody);
 		}
 
 		return res.json();
@@ -629,3 +658,8 @@ class FleetFlowSDK {
 }
 
 export default FleetFlowSDK;
+export {
+	OAuthTokenExchangeError,
+	buildOAuthRestartUrl,
+	isRecoverableOAuthCallbackError,
+};
