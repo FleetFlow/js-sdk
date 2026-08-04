@@ -133,6 +133,15 @@ class FleetFlowSDK {
 		this.headers["X-Api-Key"] = apiKey;
 	}
 
+	setSupportSession(token) {
+		if (token) this.headers["X-Support-Session"] = token;
+		else delete this.headers["X-Support-Session"];
+	}
+
+	unsetSupportSession() {
+		delete this.headers["X-Support-Session"];
+	}
+
 	setOAuthConfig(config = {}) {
 		const authBase = this.getAuthBaseURL();
 		this.oauth = {
@@ -513,10 +522,10 @@ class FleetFlowSDK {
 			let wsUrl = url;
 			if (!this.isBrowser && this.token) {
 				const separator = url.includes('?') ? '&' : '?';
-				wsUrl = `${url}${separator}Authorization=${encodeURIComponent(this.token)}&X-Api-Key=${encodeURIComponent(this.headers["X-Api-Key"] || '')}`;
+				wsUrl = `${url}${separator}Authorization=${encodeURIComponent(this.token)}&X-Api-Key=${encodeURIComponent(this.headers["X-Api-Key"] || '')}&X-Support-Session=${encodeURIComponent(this.headers["X-Support-Session"] || '')}`;
 			} else if (this.isBrowser) {
 				// In web mode, cookies are sent automatically
-				wsUrl = `${url}?X-Api-Key=${encodeURIComponent(this.headers["X-Api-Key"] || '')}`;
+				wsUrl = `${url}?X-Api-Key=${encodeURIComponent(this.headers["X-Api-Key"] || '')}&X-Support-Session=${encodeURIComponent(this.headers["X-Support-Session"] || '')}`;
 			} else {
 				throw new Error('No authentication method available for WebSocket');
 			}
@@ -589,6 +598,8 @@ class FleetFlowSDK {
 		if (path.startsWith("/setToken")) return this.setToken.bind(this);
 		if (path.startsWith("/unsetToken")) return this.unsetToken.bind(this);
 		if (path.startsWith("/setApiKey")) return this.setApiKey.bind(this);
+		if (path.startsWith("/setSupportSession")) return this.setSupportSession.bind(this);
+		if (path.startsWith("/unsetSupportSession")) return this.unsetSupportSession.bind(this);
 		if (path.startsWith("/setUserType")) return this.setUserType.bind(this);
 		if (path.startsWith("/setOAuthConfig")) return this.setOAuthConfig.bind(this);
 		if (path.startsWith("/disableOAuth")) return this.disableOAuth.bind(this);
