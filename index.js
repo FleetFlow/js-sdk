@@ -23,6 +23,28 @@ const buildOAuthRestartUrl = (redirectTo = '/', loginRoute = '/api/auth/login') 
 	return `${loginRoute}?${new URLSearchParams({ redirect_to: safeRedirect })}`;
 };
 
+let browserRequestSequence = 0;
+
+const beginDialogRequest = () => {
+	const browserDocument = globalThis.document;
+	const BrowserCustomEvent = globalThis.CustomEvent;
+	if (!browserDocument || !BrowserCustomEvent) return null;
+	const trigger = browserDocument.activeElement;
+	const scope = trigger?.closest?.('[data-dialog-request-scope="true"]');
+	if (!scope) return null;
+	const requestId = `fleetflow-${Date.now()}-${++browserRequestSequence}`;
+	scope.dispatchEvent(new BrowserCustomEvent('fleetflow:dialog-request-start', { detail: { requestId, trigger } }));
+	return { scope, requestId };
+};
+
+const notifyDialogRequest = (context, type, error = null) => {
+	const BrowserCustomEvent = globalThis.CustomEvent;
+	if (!context?.scope?.isConnected || !BrowserCustomEvent) return;
+	context.scope.dispatchEvent(new BrowserCustomEvent(`fleetflow:dialog-request-${type}`, {
+		detail: { requestId: context.requestId, error },
+	}));
+};
+
 /* FleetFlowSDK – OAuth + cookies (web) and manual Bearer (backend)
 	 2025-08-18
 	 ------------------------------------------------
@@ -347,15 +369,17 @@ class FleetFlowSDK {
 	/* ───────────────────────────── Request core ───────────────────────────── */
 
 	async request(api, version, method, path, data = {}, extraHeaders = {}, _retried = false) {
-		const root = this.buildApiRoot(api);
-		const url = `${root}/${version}/${path}`;
+		const dialogRequest = beginDialogRequest();
+		try {
+			const root = this.buildApiRoot(api);
+			const url = `${root}/${version}/${path}`;
 
-		const headers = { ...this.headers, ...extraHeaders };
+			const headers = { ...this.headers, ...extraHeaders };
 
 		// Backend-only Authorization
-		if (!this.isBrowser && this.token) {
-			headers.Authorization = `Bearer ${this.token}`;
-		}
+			if (!this.isBrowser && this.token) {
+				headers.Authorization = `Bearer ${this.token}`;
+			}
 
 		// Attach data to query string for GET/DELETE
 		let query = "";
@@ -365,6 +389,7 @@ class FleetFlowSDK {
 			Object.keys(data).length
 		) {
 			const qs = Object.entries(data).reduce((acc, [k, v]) => {
+				if (v === undefined) return acc;
 				acc[k] = typeof v === "object" ? JSON.stringify(v) : v;
 				return acc;
 			}, {});
@@ -448,6 +473,12 @@ class FleetFlowSDK {
 		return json && Object.prototype.hasOwnProperty.call(json, "data")
 			? json.data
 			: json;
+		} catch (error) {
+			notifyDialogRequest(dialogRequest, 'error', error);
+			throw error;
+		} finally {
+			notifyDialogRequest(dialogRequest, 'end');
+		}
 	}
 
 	/* ───────────────────────────── Token refresh ───────────────────────────── */
