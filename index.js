@@ -11,6 +11,29 @@ class OAuthTokenExchangeError extends Error {
 	}
 }
 
+// The auth server rotates refresh tokens and treats a second use of an old one
+// as theft: it deletes every refresh token of the user for that client. A page
+// load with an expired access token can send several refreshes at once (the
+// profile load, API calls, other tabs), so refreshes of the same token share one
+// request, and refreshes shortly after get the same new tokens.
+const REFRESH_REUSE_WINDOW_MS = 30_000;
+const sharedRefreshes = new Map();
+
+const shareRefresh = (key, refresh) => {
+	const existing = sharedRefreshes.get(key);
+	if (existing) return existing;
+	const promise = refresh();
+	sharedRefreshes.set(key, promise);
+	promise.then(
+		() => {
+			const timer = setTimeout(() => sharedRefreshes.delete(key), REFRESH_REUSE_WINDOW_MS);
+			timer?.unref?.();
+		},
+		() => sharedRefreshes.delete(key)
+	);
+	return promise;
+};
+
 const isRecoverableOAuthCallbackError = (error) => {
 	if (!(error instanceof OAuthTokenExchangeError)) return false;
 	if (![400, 401].includes(error.status)) return false;
@@ -309,33 +332,36 @@ class FleetFlowSDK {
 	}
 
 	// Server-side: refresh tokens at the auth app
-	async oauthRefreshWithToken({ refreshToken, clientId }) {
+	oauthRefreshWithToken({ refreshToken, clientId }) {
 		const tokenEndpoint =
 			this.oauth.tokenEndpoint || `${this.getAuthBaseURL()}/api/better-auth/oauth2/token`;
+		const client = clientId || this.oauth.clientId;
 
 		const body = new URLSearchParams({
 			grant_type: "refresh_token",
 			refresh_token: refreshToken,
-			client_id: clientId || this.oauth.clientId,
+			client_id: client,
 			resource: this.oauth.resource || this.getAuthBaseURL(),
 		});
 
-		const res = await fetch(tokenEndpoint, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/x-www-form-urlencoded",
-			},
-			body,
+		return shareRefresh(`${tokenEndpoint} ${client} ${refreshToken}`, async () => {
+			const res = await fetch(tokenEndpoint, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded",
+				},
+				body,
+			});
+
+			if (!res.ok) {
+				const text = await res.text();
+				throw new Error(
+					`Refresh failed (${res.status}): ${text || "unknown"}`
+				);
+			}
+
+			return res.json();
 		});
-
-		if (!res.ok) {
-			const text = await res.text();
-			throw new Error(
-				`Refresh failed (${res.status}): ${text || "unknown"}`
-			);
-		}
-
-		return res.json();
 	}
 
 	/* ───────────────────────────── Logout ───────────────────────────── */
